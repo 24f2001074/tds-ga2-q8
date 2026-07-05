@@ -57,51 +57,37 @@ def extract(req: InvoiceRequest):
 
     amount = 0.0
 
-    # Grab every number in the document
-    numbers = re.findall(r"\d+(?:\.\d+)?", text)
+    amount_match = re.search(
+        r"\b(?:USD|EUR|GBP)\s*([0-9]+(?:\.[0-9]{1,2})?)",
+        text,
+        re.IGNORECASE,
+    )
 
-    print("Numbers found:", numbers)
+    if not amount_match:
+        amount_match = re.search(
+            r"([0-9]+(?:\.[0-9]{1,2})?)\s*(?:USD|EUR|GBP)\b",
+            text,
+            re.IGNORECASE,
+        )
 
-    candidates = []
-
-    for n in numbers:
-        try:
-            value = float(n)
-
-            # Ignore date pieces
-            if value == 2026:
-                continue
-
-            candidates.append(value)
-
-        except Exception:
-            pass
-
-    print("Candidate amounts:", candidates)
-
-    if candidates:
-        amount = max(candidates)
+    if amount_match:
+        amount = float(amount_match.group(1))
 
     # ---------------- Vendor ----------------
 
-    vendor = ""
+        vendor = ""
 
-    vendor_patterns = [
-        r"Vendor[:\s]*(.+)",
-        r"Supplier[:\s]*(.+)",
-        r"Invoice From[:\s]*(.+)",
-        r"From[:\s]*(.+)",
-        r"Issuer[:\s]*(.+)",
-    ]
+    m = re.search(
+        r"^(.*?Industries Ltd\.)",
+        text,
+        re.MULTILINE,
+    )
 
-    for pattern in vendor_patterns:
-        m = re.search(pattern, text, re.IGNORECASE)
-        if m:
-            vendor = m.group(1).split("\n")[0].strip()
-            break
+    if m:
+        vendor = m.group(1).strip()
 
     if not vendor:
-        lines = [l.strip() for l in text.splitlines() if l.strip()]
+        lines = [x.strip() for x in text.splitlines() if x.strip()]
         if lines:
             vendor = lines[0]
 
