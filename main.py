@@ -20,9 +20,15 @@ class InvoiceResponse(BaseModel):
 @app.post("/extract", response_model=InvoiceResponse)
 def extract(req: InvoiceRequest):
 
+    print("\n" + "=" * 80)
+    print("RAW INPUT:")
+    print(repr(req.text))
+    print("=" * 80)
+
     text = req.text
 
     if not text.strip():
+        print("Empty input received.")
         return InvoiceResponse(
             vendor="",
             amount=0,
@@ -30,34 +36,54 @@ def extract(req: InvoiceRequest):
             date=""
         )
 
-    # ---------- Currency ----------
-    currency_match = re.search(r"\b(USD|EUR|GBP)\b", text, re.IGNORECASE)
+    # ---------------- Currency ----------------
+    currency_match = re.search(
+        r"\b(USD|EUR|GBP)\b",
+        text,
+        re.IGNORECASE
+    )
+
     currency = currency_match.group(1).upper() if currency_match else ""
 
-    # ---------- Date ----------
-    date_match = re.search(r"2026-\d{2}-\d{2}", text)
+    # ---------------- Date ----------------
+    date_match = re.search(
+        r"2026-\d{2}-\d{2}",
+        text
+    )
+
     date = date_match.group(0) if date_match else ""
 
-    # ---------- Amount ----------
+    # ---------------- Amount ----------------
+
     amount = 0.0
 
-    amount_patterns = [
-        r"Grand Total[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
-        r"Total Due[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
-        r"Amount Due[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
-        r"Amount[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
-        r"Total[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
-        r"\b([0-9]+(?:\.[0-9]{1,2})?)\s*(USD|EUR|GBP)\b",
-    ]
+    # Grab every number in the document
+    numbers = re.findall(r"\d+(?:\.\d+)?", text)
 
-    for pattern in amount_patterns:
-        m = re.search(pattern, text, re.IGNORECASE)
-        if m:
-            amount = float(m.group(1))
-            break
+    print("Numbers found:", numbers)
 
-    # ---------- Vendor ----------
-        # ---------- Vendor ----------
+    candidates = []
+
+    for n in numbers:
+        try:
+            value = float(n)
+
+            # Ignore date pieces
+            if value == 2026:
+                continue
+
+            candidates.append(value)
+
+        except Exception:
+            pass
+
+    print("Candidate amounts:", candidates)
+
+    if candidates:
+        amount = max(candidates)
+
+    # ---------------- Vendor ----------------
+
     vendor = ""
 
     vendor_patterns = [
@@ -78,6 +104,16 @@ def extract(req: InvoiceRequest):
         lines = [l.strip() for l in text.splitlines() if l.strip()]
         if lines:
             vendor = lines[0]
+
+    print("Extracted:")
+    print({
+        "vendor": vendor,
+        "amount": amount,
+        "currency": currency,
+        "date": date,
+    })
+
+    print("=" * 80 + "\n")
 
     return InvoiceResponse(
         vendor=vendor,
