@@ -42,13 +42,13 @@ def extract(req: InvoiceRequest):
     amount = 0.0
 
     amount_patterns = [
-    	r"Grand Total[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
-    	r"Total Due[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
-    	r"Amount Due[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
-    	r"Amount[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
-    	r"Total[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
-    	r"\b([0-9]+(?:\.[0-9]{1,2})?)\s*(USD|EUR|GBP)\b",
-	]
+        r"Grand Total[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
+        r"Total Due[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
+        r"Amount Due[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
+        r"Amount[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
+        r"Total[:\s]*\$?([0-9]+(?:\.[0-9]{1,2})?)",
+        r"\b([0-9]+(?:\.[0-9]{1,2})?)\s*(USD|EUR|GBP)\b",
+    ]
 
     for pattern in amount_patterns:
         m = re.search(pattern, text, re.IGNORECASE)
@@ -57,23 +57,31 @@ def extract(req: InvoiceRequest):
             break
 
     # ---------- Vendor ----------
-	vendor = ""
+        # ---------- Vendor ----------
+    vendor = ""
 
-	vendor_patterns = [
-    	r"Vendor[:\s]*(.+)",
-    	r"Supplier[:\s]*(.+)",
-    	r"Invoice From[:\s]*(.+)",
-    	r"From[:\s]*(.+)",
-    	r"Issuer[:\s]*(.+)",
-	]
+    vendor_patterns = [
+        r"Vendor[:\s]*(.+)",
+        r"Supplier[:\s]*(.+)",
+        r"Invoice From[:\s]*(.+)",
+        r"From[:\s]*(.+)",
+        r"Issuer[:\s]*(.+)",
+    ]
 
-	for pattern in vendor_patterns:
-    	m = re.search(pattern, text, re.IGNORECASE)
-    	if m:
-        	vendor = m.group(1).split("\n")[0].strip()
-        	break
+    for pattern in vendor_patterns:
+        m = re.search(pattern, text, re.IGNORECASE)
+        if m:
+            vendor = m.group(1).split("\n")[0].strip()
+            break
 
-	if not vendor:
-    	lines = [l.strip() for l in text.splitlines() if l.strip()]
-    	if lines:
-        	vendor = lines[0]
+    if not vendor:
+        lines = [l.strip() for l in text.splitlines() if l.strip()]
+        if lines:
+            vendor = lines[0]
+
+    return InvoiceResponse(
+        vendor=vendor,
+        amount=amount,
+        currency=currency,
+        date=date,
+    )
